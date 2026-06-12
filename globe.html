@@ -280,7 +280,8 @@
   <!-- NAV -->
   <nav id="navbar">
     <a href="index.html" class="nav-logo">
-      <span class="nav-logo-text">UsinerProduction</span>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf0AAAHqCAYAAAAOH5erAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAB/aADAAQAAAABAAAB6[...]
+      <span class="nav-tagline">Je capture l'instant, je crée l'émotion</span>
     </a>
     <ul class="nav-links" id="navLinks">
       <li><a href="index.html#services" onclick="closeMenu()">Services</a></li>
@@ -325,31 +326,36 @@
         name: 'Vietnam',
         desc: 'Découvrez les paysages époustouflants et la culture vibrante du Vietnam à travers nos vidéos exclusives.',
         videoId: 'grszAOYAauM',
-        coords: { lat: 16, lon: 106 }
+        coords: { lat: 16, lon: 106 },
+        hasVideo: true
       },
       thailand: {
         name: 'Thaïlande',
         desc: 'Temples dorés, plages paradisiaques et vie nocturne dynamique vous attendent en Thaïlande.',
         videoId: null,
-        coords: { lat: 15, lon: 101 }
+        coords: { lat: 15, lon: 101 },
+        hasVideo: false
       },
       japan: {
         name: 'Japon',
         desc: 'Entre tradition et modernité, le Japon offre des expériences visuelles extraordinaires.',
         videoId: null,
-        coords: { lat: 36.2, lon: 138.25 }
+        coords: { lat: 36.2, lon: 138.25 },
+        hasVideo: false
       },
       indonesia: {
         name: 'Indonésie',
         desc: 'Volcans majestueux, rizières verdoyantes et îles paradisiaques vous enchantent.',
         videoId: null,
-        coords: { lat: -2, lon: 113 }
+        coords: { lat: -2, lon: 113 },
+        hasVideo: false
       },
       france: {
         name: 'France',
         desc: 'Notre pays, capturé dans toute sa beauté et son élégance.',
         videoId: null,
-        coords: { lat: 46.2, lon: 2.2 }
+        coords: { lat: 46.2, lon: 2.2 },
+        hasVideo: false
       }
     };
 
@@ -367,21 +373,17 @@
     // ── CREATE GLOBE ──
     const textureLoader = new THREE.TextureLoader();
 
-    // Utiliser une texture de terre simple mais belle
     const earthTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
     
-    // Fallback texture si la première ne charge pas
     earthTexture.onError = () => {
       const canvas2d = document.createElement('canvas');
       canvas2d.width = 2048;
       canvas2d.height = 1024;
       const ctx = canvas2d.getContext('2d');
       
-      // Créer une texture dégradée représentant la terre
       ctx.fillStyle = '#1a4d2e';
       ctx.fillRect(0, 0, 2048, 1024);
       
-      // Ajouter des variations
       ctx.fillStyle = '#2d6e4c';
       for (let i = 0; i < 100; i++) {
         ctx.fillRect(Math.random() * 2048, Math.random() * 1024, Math.random() * 100, Math.random() * 100);
@@ -427,6 +429,7 @@
     const pointsGeometry = new THREE.BufferGeometry();
     const pointsData = [];
     const pointColors = [];
+    const pointSizes = [];
 
     Object.keys(COUNTRIES).forEach(key => {
       const country = COUNTRIES[key];
@@ -442,19 +445,27 @@
       // Ajouter le point à la géométrie
       pointsData.push(x, y, z);
       
-      // Couleur dorée pour tous les points
-      pointColors.push(168/255, 152/255, 128/255); // couleur gold
+      // Couleur dorée plus éclatante pour les points avec vidéo
+      if (country.hasVideo) {
+        pointColors.push(255/255, 215/255, 0/255); // Gold plus bright
+        pointSizes.push(8); // Taille plus grande
+      } else {
+        pointColors.push(168/255, 152/255, 128/255); // Gold muted
+        pointSizes.push(5); // Taille normale
+      }
     });
 
     pointsGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointsData), 3));
     pointsGeometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pointColors), 3));
+    pointsGeometry.setAttribute('size', new THREE.BufferAttribute(new Float32Array(pointSizes), 1));
 
     const pointsMaterial = new THREE.PointsMaterial({
-      size: 0.02,
+      size: 0.03,
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.9
+      opacity: 1,
+      sizeVariation: true
     });
 
     const points = new THREE.Points(pointsGeometry, pointsMaterial);
@@ -462,6 +473,7 @@
 
     // ── RAYCASTER POUR INTERACTION ──
     const raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 0.15;
     const mouse = new THREE.Vector2();
     let selectedCountry = 'vietnam';
 
@@ -504,25 +516,24 @@
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersection = raycaster.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1));
+      const intersects = raycaster.intersectObject(points);
       
-      if (intersection) {
-        const closest = intersection[0];
+      if (intersects.length > 0) {
         let closestCountry = null;
         let closestDist = Infinity;
 
         Object.keys(countryPoints).forEach(key => {
           const point = countryPoints[key];
-          const dist = new THREE.Vector3(point.x, point.y, point.z).distanceTo(closest);
+          const pointVec = new THREE.Vector3(point.x, point.y, point.z);
+          const dist = pointVec.distanceTo(intersects[0].point);
           if (dist < closestDist) {
             closestDist = dist;
             closestCountry = key;
           }
         });
 
-        if (closestCountry && closestDist < 0.2) {
+        if (closestCountry && closestDist < 0.25) {
           const currentTime = new Date().getTime();
-          // Double-clic détection
           if (lastClickCountry === closestCountry && currentTime - lastClickTime < 300) {
             centerOnCountry(closestCountry);
             lastClickTime = 0;
@@ -549,6 +560,7 @@
         videoBtn.style.opacity = '1';
         videoBtn.style.pointerEvents = 'auto';
         videoBtn.textContent = 'Voir la vidéo';
+        videoBtn.onclick = () => openCountryVideo(key);
       } else {
         videoBtn.style.opacity = '0.5';
         videoBtn.style.pointerEvents = 'none';
@@ -562,9 +574,8 @@
       const country = countryPoints[key];
       selectCountry(key);
       
-      // Animation pour centrer le globe
       const targetRotY = Math.atan2(country.z, country.x);
-      const targetRotX = Math.asin(country.y);
+      const targetRotX = Math.asin(Math.max(-1, Math.min(1, country.y)));
       
       targetRotationX = targetRotX;
       targetRotationY = targetRotY;
@@ -583,10 +594,8 @@
 
       globe.rotation.x += (targetRotationX - globe.rotation.x) * 0.05;
       globe.rotation.y += (targetRotationY - globe.rotation.y) * 0.05;
+      globe.rotation.z += 0.00005;
       
-      globe.rotation.z += 0.0001; // Léger spin continu
-      
-      // Rotation des points avec le globe
       points.rotation.x = globe.rotation.x;
       points.rotation.y = globe.rotation.y;
       points.rotation.z = globe.rotation.z;
