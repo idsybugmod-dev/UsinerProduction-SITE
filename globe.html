@@ -18,6 +18,7 @@
       --muted: #5a5a5a;
       --border: #1c1c1c;
       --gold: #a89880;
+      --blue: #4a90e2;
     }
 
     body {
@@ -49,11 +50,25 @@
       gap: 0.6rem;
       text-decoration: none;
     }
+    .nav-logo-img {
+      height: 32px;
+      width: auto;
+      object-fit: contain;
+    }
     .nav-logo-text {
       font-family: 'Bebas Neue', sans-serif;
       font-size: 1.1rem;
       letter-spacing: 0.12em;
       color: var(--text);
+    }
+    .nav-tagline {
+      font-size: 0.62rem;
+      letter-spacing: 0.18em;
+      color: var(--blue);
+      font-style: italic;
+      opacity: 1;
+      white-space: nowrap;
+      margin-left: 1rem;
     }
 
     .nav-links {
@@ -98,6 +113,7 @@
     @media (max-width: 768px) {
       .burger { display: flex; }
       nav { padding: 1rem 1.2rem; }
+      .nav-tagline { display: none; }
       .nav-links {
         position: fixed;
         top: 0; right: -100%;
@@ -123,6 +139,7 @@
       overflow: hidden;
       background: linear-gradient(135deg, #0a0a12 0%, #1a0f1a 50%, #0f1a15 100%);
       margin-top: 0;
+      padding-top: 0;
     }
 
     #canvas {
@@ -261,17 +278,6 @@
     @media (max-width: 768px) {
       .globe-instructions { display: none; }
       .info-panel { width: calc(100% - 2rem); bottom: 1rem; left: 1rem; right: 1rem; }
-      .nav-links { display: none; }
-    }
-
-    /* ── GLOBE SURFACE INTERACTIONS ── */
-    .country-label {
-      position: absolute;
-      font-size: 0.7rem;
-      color: var(--gold);
-      pointer-events: none;
-      text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
-      letter-spacing: 0.1em;
     }
   </style>
 </head>
@@ -280,7 +286,8 @@
   <!-- NAV -->
   <nav id="navbar">
     <a href="index.html" class="nav-logo">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf0AAAHqCAYAAAAOH5erAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAB/aADAAQAAAABAAAB6[...]
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAf0AAAHqCAYAAAAOH5erAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAB/aADAAQAAAABAAAB6[...]" class="nav-logo-img" alt="Logo">
+      <span class="nav-logo-text">UsinerProduction</span>
       <span class="nav-tagline">Je capture l'instant, je crée l'émotion</span>
     </a>
     <ul class="nav-links" id="navLinks">
@@ -320,34 +327,34 @@
   </div>
 
   <script>
-    // ── CONFIGURATION ──
+    // ── CONFIGURATION ── COORDONNÉES PRÉCISES
     const COUNTRIES = {
       vietnam: {
         name: 'Vietnam',
         desc: 'Découvrez les paysages époustouflants et la culture vibrante du Vietnam à travers nos vidéos exclusives.',
         videoId: 'grszAOYAauM',
-        coords: { lat: 16, lon: 107 },
+        coords: { lat: 15.87, lon: 102.8 },
         hasVideo: true
       },
       thailand: {
         name: 'Thaïlande',
         desc: 'Temples dorés, plages paradisiaques et vie nocturne dynamique vous attendent en Thaïlande.',
         videoId: null,
-        coords: { lat: 15, lon: 101 },
+        coords: { lat: 13.75, lon: 100.5 },
         hasVideo: false
       },
       japan: {
         name: 'Japon',
         desc: 'Entre tradition et modernité, le Japon offre des expériences visuelles extraordinaires.',
         videoId: null,
-        coords: { lat: 35.7, lon: 139.7 },
+        coords: { lat: 35.67, lon: 139.65 },
         hasVideo: false
       },
       indonesia: {
         name: 'Indonésie',
         desc: 'Volcans majestueux, rizières verdoyantes et îles paradisiaques vous enchantent.',
         videoId: null,
-        coords: { lat: -6.2, lon: 106.8 },
+        coords: { lat: -6.17, lon: 106.83 },
         hasVideo: false
       },
       france: {
@@ -372,35 +379,8 @@
 
     // ── CREATE GLOBE ──
     const textureLoader = new THREE.TextureLoader();
-
     const earthTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
     
-    earthTexture.onError = () => {
-      const canvas2d = document.createElement('canvas');
-      canvas2d.width = 2048;
-      canvas2d.height = 1024;
-      const ctx = canvas2d.getContext('2d');
-      
-      ctx.fillStyle = '#1a4d2e';
-      ctx.fillRect(0, 0, 2048, 1024);
-      
-      ctx.fillStyle = '#2d6e4c';
-      for (let i = 0; i < 100; i++) {
-        ctx.fillRect(Math.random() * 2048, Math.random() * 1024, Math.random() * 100, Math.random() * 100);
-      }
-      ctx.fillStyle = '#4a90e2';
-      for (let i = 0; i < 50; i++) {
-        ctx.fillRect(Math.random() * 2048, Math.random() * 1024, Math.random() * 200, Math.random() * 150);
-      }
-      
-      const fallbackTexture = new THREE.CanvasTexture(canvas2d);
-      const geometry = new THREE.SphereGeometry(1, 64, 64);
-      const material = new THREE.MeshPhongMaterial({ map: fallbackTexture });
-      const globe = new THREE.Mesh(geometry, material);
-      scene.add(globe);
-      window.globe = globe;
-    };
-
     const geometry = new THREE.SphereGeometry(1, 128, 128);
     const material = new THREE.MeshPhongMaterial({
       map: earthTexture,
@@ -424,13 +404,15 @@
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    // ── POINTS DE PAYS (MARKERS) ──
+    // ── POINTS DE PAYS - POSITIONNÉS CORRECTEMENT ──
     const countryPoints = {};
     const markersGroup = new THREE.Group();
     scene.add(markersGroup);
 
     Object.keys(COUNTRIES).forEach(key => {
       const country = COUNTRIES[key];
+      
+      // Conversion lat/lon en coordonnées 3D sur la sphère
       const lat = country.coords.lat * Math.PI / 180;
       const lon = country.coords.lon * Math.PI / 180;
 
@@ -440,27 +422,27 @@
 
       countryPoints[key] = { x, y, z, ...country };
       
-      // Créer une sphère pour chaque point
-      let markerSize = country.hasVideo ? 0.045 : 0.028;
+      // Créer une sphère pour le marqueur
+      let markerSize = country.hasVideo ? 0.055 : 0.035;
       const markerGeometry = new THREE.SphereGeometry(markerSize, 32, 32);
       
       let markerMaterial;
       if (country.hasVideo) {
         markerMaterial = new THREE.MeshBasicMaterial({
-          color: 0xffd700, // Gold bright
+          color: 0xffd700,
           emissive: 0xffa500,
-          emissiveIntensity: 0.8
+          emissiveIntensity: 1.2
         });
       } else {
         markerMaterial = new THREE.MeshBasicMaterial({
-          color: 0xa89880, // Gold muted
+          color: 0xa89880,
           emissive: 0x6e6054,
-          emissiveIntensity: 0.4
+          emissiveIntensity: 0.6
         });
       }
       
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-      marker.position.set(x, y, z);
+      marker.position.set(x * 1.02, y * 1.02, z * 1.02);
       marker.userData.countryKey = key;
       markersGroup.add(marker);
     });
