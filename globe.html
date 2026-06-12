@@ -326,7 +326,7 @@
         name: 'Vietnam',
         desc: 'Découvrez les paysages époustouflants et la culture vibrante du Vietnam à travers nos vidéos exclusives.',
         videoId: 'grszAOYAauM',
-        coords: { lat: 16, lon: 106 },
+        coords: { lat: 16, lon: 107 },
         hasVideo: true
       },
       thailand: {
@@ -340,21 +340,21 @@
         name: 'Japon',
         desc: 'Entre tradition et modernité, le Japon offre des expériences visuelles extraordinaires.',
         videoId: null,
-        coords: { lat: 36.2, lon: 138.25 },
+        coords: { lat: 35.7, lon: 139.7 },
         hasVideo: false
       },
       indonesia: {
         name: 'Indonésie',
         desc: 'Volcans majestueux, rizières verdoyantes et îles paradisiaques vous enchantent.',
         videoId: null,
-        coords: { lat: -2, lon: 113 },
+        coords: { lat: -6.2, lon: 106.8 },
         hasVideo: false
       },
       france: {
         name: 'France',
         desc: 'Notre pays, capturé dans toute sa beauté et son élégance.',
         videoId: null,
-        coords: { lat: 46.2, lon: 2.2 },
+        coords: { lat: 48.85, lon: 2.35 },
         hasVideo: false
       }
     };
@@ -424,12 +424,10 @@
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    // ── POINTS DE PAYS ──
+    // ── POINTS DE PAYS (MARKERS) ──
     const countryPoints = {};
-    const pointsGeometry = new THREE.BufferGeometry();
-    const pointsData = [];
-    const pointColors = [];
-    const pointSizes = [];
+    const markersGroup = new THREE.Group();
+    scene.add(markersGroup);
 
     Object.keys(COUNTRIES).forEach(key => {
       const country = COUNTRIES[key];
@@ -442,38 +440,33 @@
 
       countryPoints[key] = { x, y, z, ...country };
       
-      // Ajouter le point à la géométrie
-      pointsData.push(x, y, z);
+      // Créer une sphère pour chaque point
+      let markerSize = country.hasVideo ? 0.045 : 0.028;
+      const markerGeometry = new THREE.SphereGeometry(markerSize, 32, 32);
       
-      // Couleur dorée plus éclatante pour les points avec vidéo
+      let markerMaterial;
       if (country.hasVideo) {
-        pointColors.push(255/255, 215/255, 0/255); // Gold plus bright
-        pointSizes.push(8); // Taille plus grande
+        markerMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffd700, // Gold bright
+          emissive: 0xffa500,
+          emissiveIntensity: 0.8
+        });
       } else {
-        pointColors.push(168/255, 152/255, 128/255); // Gold muted
-        pointSizes.push(5); // Taille normale
+        markerMaterial = new THREE.MeshBasicMaterial({
+          color: 0xa89880, // Gold muted
+          emissive: 0x6e6054,
+          emissiveIntensity: 0.4
+        });
       }
+      
+      const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+      marker.position.set(x, y, z);
+      marker.userData.countryKey = key;
+      markersGroup.add(marker);
     });
-
-    pointsGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointsData), 3));
-    pointsGeometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pointColors), 3));
-    pointsGeometry.setAttribute('size', new THREE.BufferAttribute(new Float32Array(pointSizes), 1));
-
-    const pointsMaterial = new THREE.PointsMaterial({
-      size: 0.03,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 1,
-      sizeVariation: true
-    });
-
-    const points = new THREE.Points(pointsGeometry, pointsMaterial);
-    scene.add(points);
 
     // ── RAYCASTER POUR INTERACTION ──
     const raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 0.15;
     const mouse = new THREE.Vector2();
     let selectedCountry = 'vietnam';
 
@@ -516,33 +509,21 @@
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObject(points);
+      const intersects = raycaster.intersectObjects(markersGroup.children);
       
       if (intersects.length > 0) {
-        let closestCountry = null;
-        let closestDist = Infinity;
-
-        Object.keys(countryPoints).forEach(key => {
-          const point = countryPoints[key];
-          const pointVec = new THREE.Vector3(point.x, point.y, point.z);
-          const dist = pointVec.distanceTo(intersects[0].point);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestCountry = key;
-          }
-        });
-
-        if (closestCountry && closestDist < 0.25) {
-          const currentTime = new Date().getTime();
-          if (lastClickCountry === closestCountry && currentTime - lastClickTime < 300) {
-            centerOnCountry(closestCountry);
-            lastClickTime = 0;
-            lastClickCountry = null;
-          } else {
-            selectCountry(closestCountry);
-            lastClickTime = currentTime;
-            lastClickCountry = closestCountry;
-          }
+        const clickedMarker = intersects[0].object;
+        const countryKey = clickedMarker.userData.countryKey;
+        
+        const currentTime = new Date().getTime();
+        if (lastClickCountry === countryKey && currentTime - lastClickTime < 300) {
+          centerOnCountry(countryKey);
+          lastClickTime = 0;
+          lastClickCountry = null;
+        } else {
+          selectCountry(countryKey);
+          lastClickTime = currentTime;
+          lastClickCountry = countryKey;
         }
       }
     });
@@ -596,9 +577,9 @@
       globe.rotation.y += (targetRotationY - globe.rotation.y) * 0.05;
       globe.rotation.z += 0.00005;
       
-      points.rotation.x = globe.rotation.x;
-      points.rotation.y = globe.rotation.y;
-      points.rotation.z = globe.rotation.z;
+      markersGroup.rotation.x = globe.rotation.x;
+      markersGroup.rotation.y = globe.rotation.y;
+      markersGroup.rotation.z = globe.rotation.z;
 
       renderer.render(scene, camera);
     }
